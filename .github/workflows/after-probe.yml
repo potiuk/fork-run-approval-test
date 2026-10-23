@@ -1,0 +1,12 @@
+name: after-probe
+on:
+  workflow_run:
+    workflows: [probe]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  after:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "downstream fired after probe run ${{ github.event.workflow_run.id }} (${{ github.event.workflow_run.conclusion }})"
