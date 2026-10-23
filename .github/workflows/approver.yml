@@ -1,0 +1,31 @@
+name: approver
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run to approve (empty = every action_required run)"
+        required: false
+permissions:
+  actions: write
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RUN_ID}" ]]; then
+            ids=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?status=action_required" --jq '.workflow_runs[].id')
+          else
+            ids="${RUN_ID}"
+          fi
+          for id in ${ids}; do
+            echo "::group::approve ${id}"
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/approve" -i || echo "APPROVE FAILED for ${id}"
+            sleep 5
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${id}" --jq '{id, status, conclusion}'
+            echo "::endgroup::"
+          done
